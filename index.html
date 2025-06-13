@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Gemini Chat</title>
+    <style>
+      body {
+        font-family: Arial;
+        margin: 40px;
+      }
+      #chat {
+        border: 1px solid #ccc;
+        padding: 10px;
+        height: 300px;
+        overflow-y: auto;
+      }
+      #input {
+        width: 80%;
+      }
+      #send {
+        width: 15%;
+      }
+      .user {
+        color: blue;
+      }
+      .bot {
+        color: green;
+      }
+      .dynamic-option {
+        display: block;
+        margin: 10px 0;
+        padding: 16px 20px;
+        background: #f7faff;
+        border: 2px solid #2a5d9f;
+        border-radius: 8px;
+        font-size: 1.1em;
+        font-weight: 500;
+        color: #2a5d9f;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s, border 0.2s;
+        box-shadow: 0 2px 8px #0001;
+      }
+      .dynamic-option:hover {
+        background: #2a5d9f;
+        color: #fff;
+        border-color: #17406a;
+      }
+      .dynamic-option.selected {
+        background: #17406a;
+        color: #fff;
+        border-color: #17406a;
+      }
+      .answered {
+        opacity: 0.7;
+        pointer-events: none;
+      }
+      .question-progress {
+        margin-bottom: 12px;
+        color: #888;
+        font-size: 0.98em;
+      }
+      #result .article-html {
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 24px;
+        margin-top: 16px;
+        box-shadow: 0 2px 8px #0001;
+        max-width: 700px;
+        line-height: 1.7;
+      }
+      #result .article-html h1,
+      #result .article-html h2,
+      #result .article-html h3 {
+        color: #2a5d9f;
+        margin-top: 0;
+      }
+      #result .article-html ul,
+      #result .article-html ol {
+        margin-left: 24px;
+      }
+      #result .article-html strong {
+        color: #d2691e;
+      }
+      #result .article-html em {
+        color: #008080;
+      }
+      #result .article-html .hashtags {
+        color: #0077cc;
+        font-weight: bold;
+        margin-top: 12px;
+        display: block;
+      }
+      #main-flex {
+        display: flex;
+        gap: 32px;
+        align-items: flex-start;
+      }
+      #question-list {
+        flex: 1;
+        min-width: 220px;
+      }
+      #questionnaire {
+        flex: 2;
+      }
+    </style>
+  </head>
+  <body>
+    <h2>AI Writer Assistant</h2>
+    <div id="main-flex">
+      <div id="question-list"></div>
+      <div id="questionnaire"></div>
+    </div>
+    <div id="result" style="margin-top: 30px"></div>
+    <script>
+      const questionnaire = document.getElementById("questionnaire");
+      const resultDiv = document.getElementById("result");
+      const fixedTopics = [
+        "Giới thiệu về AI",
+        "Đám cưới",
+        "Du lịch Đà Lạt",
+        "Sản phẩm mới",
+        "Kinh nghiệm học tập",
+      ];
+      let selectedTopic = "";
+      let questions = [];
+      let answers = [];
+      let currentQuestion = 0;
+      let tone = "";
+
+      function renderTopics() {
+        questionnaire.innerHTML = "<p>Bạn muốn viết về chủ đề nào?</p>";
+        fixedTopics.forEach((topic) => {
+          const btn = document.createElement("button");
+          btn.textContent = topic;
+          btn.className = "dynamic-option";
+          btn.onclick = () => handleTopic(topic);
+          questionnaire.appendChild(btn);
+        });
+        // Cho phép nhập chủ đề tự do
+        const input = document.createElement("input");
+        input.type = "text";
+        input.placeholder = "Hoặc nhập chủ đề khác...";
+        input.style.marginTop = "10px";
+        input.onkeydown = (e) => {
+          if (e.key === "Enter" && input.value.trim())
+            handleTopic(input.value.trim());
+        };
+        questionnaire.appendChild(input);
+      }
+
+      async function handleTopic(topic) {
+        selectedTopic = topic;
+        answers = [];
+        currentQuestion = 0;
+        document.getElementById('question-list').innerHTML = '';
+        questionnaire.innerHTML = `<i>Đang lấy 5 câu hỏi gợi ý...</i>`;
+        resultDiv.innerHTML = "";
+        // Gọi API lấy 5 câu hỏi
+        const res = await fetch("/suggest-questions", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic }),
+        });
+        const data = await res.json();
+        // Nếu mảng trả về >5 phần tử, chỉ lấy 5 phần tử cuối cùng
+        if (Array.isArray(data.questions) && data.questions.length > 5) {
+          questions = data.questions.slice(-5);
+        } else {
+          questions = data.questions || [];
+        }
+        if (questions.length === 5) {
+          renderQuestion(0);
+        } else {
+          questionnaire.innerHTML = "Không lấy được đủ 5 câu hỏi.";
+        }
+      }
+
+      // Gợi ý option mẫu cho từng câu hỏi (có thể tùy chỉnh theo chủ đề)
+      function getOptionsForQuestion(idx) {
+        const optionsList = [
+          [
+            "AI là trí tuệ nhân tạo giúp máy móc suy nghĩ như con người",
+            "AI là công nghệ mô phỏng trí tuệ con người",
+            "AI là hệ thống tự động hóa thông minh",
+          ],
+          [
+            "Chatbot, xe tự lái, phân tích dữ liệu",
+            "Nhận diện khuôn mặt, dịch tự động, đề xuất sản phẩm",
+            "Robot hỗ trợ y tế, trợ lý ảo",
+          ],
+          [
+            "Tăng năng suất, hỗ trợ con người",
+            "Tự động hóa công việc lặp lại",
+            "Giúp ra quyết định nhanh hơn",
+          ],
+          [
+            "AI giúp cuộc sống dễ dàng hơn",
+            "AI thay đổi cách làm việc và học tập",
+            "AI thúc đẩy đổi mới sáng tạo",
+          ],
+          [
+            "Thân thiện, dễ hiểu",
+            "Chuyên nghiệp, học thuật",
+            "Hài hước, gần gũi",
+          ],
+        ];
+        return optionsList[idx] || [];
+      }
+
+      // Hiển thị danh sách câu hỏi và câu trả lời đã chọn
+      function renderQuestionList(currentIdx) {
+        const ql = document.getElementById('question-list');
+        if (!ql) return;
+        let html = '<div style="font-weight:bold;font-size:1.1em;margin-bottom:10px;">Câu hỏi</div>';
+        for (let i = 0; i < questions.length; i++) {
+          html += `<div style='margin-bottom:12px;${i===currentIdx?'color:#2a5d9f;font-weight:bold;':''}'>${i+1}. ${questions[i]}<br>`;
+          if (answers[i]) {
+            html += `<span style='background:#e3f2fd;border-radius:4px;padding:2px 8px;margin-top:2px;display:inline-block;'>${answers[i]}</span>`;
+          }
+          html += '</div>';
+        }
+        ql.innerHTML = html;
+      }
+
+      function renderQuestion(idx) {
+        renderQuestionList(idx);
+        questionnaire.innerHTML = `<div class='question-progress'>Câu hỏi ${idx+1}/5</div><p>${questions[idx]}</p>`;
+        const options = getOptionsForQuestion(idx);
+        let selected = null;
+        if (options.length > 0) {
+          options.forEach((opt) => {
+            const btn = document.createElement("button");
+            btn.textContent = opt;
+            btn.className = "dynamic-option";
+            btn.onclick = () => {
+              selected = opt;
+              btn.classList.add('selected');
+              setTimeout(()=>handleAnswer(opt), 200);
+            };
+            questionnaire.appendChild(btn);
+          });
+          // Option cho phép nhập tự do
+          const input = document.createElement("input");
+          input.type = "text";
+          input.placeholder = "Hoặc nhập câu trả lời khác...";
+          input.style.marginTop = "10px";
+          input.onkeydown = (e) => {
+            if (e.key === "Enter" && input.value.trim()) handleAnswer(input.value.trim());
+          };
+          questionnaire.appendChild(input);
+          const btn = document.createElement("button");
+          btn.textContent = idx < 4 ? "Tiếp theo" : "Tạo bài viết";
+          btn.style.marginLeft = "10px";
+          btn.onclick = () => {
+            if (input.value.trim()) handleAnswer(input.value.trim());
+          };
+          questionnaire.appendChild(btn);
+        } else {
+          // Nếu không có option, chỉ cho nhập tự do
+          const input = document.createElement("input");
+          input.type = "text";
+          input.style.width = "80%";
+          input.placeholder = "Nhập câu trả lời...";
+          input.onkeydown = (e) => {
+            if (e.key === "Enter" && input.value.trim()) handleAnswer(input.value.trim());
+          };
+          questionnaire.appendChild(input);
+          const btn = document.createElement("button");
+          btn.textContent = idx < 4 ? "Tiếp theo" : "Tạo bài viết";
+          btn.style.marginLeft = "10px";
+          btn.onclick = () => {
+            if (input.value.trim()) handleAnswer(input.value.trim());
+          };
+          questionnaire.appendChild(btn);
+        }
+      }
+
+      function handleAnswer(answer) {
+        answers.push(answer);
+        currentQuestion++;
+        if (currentQuestion < 5) {
+          renderQuestion(currentQuestion);
+        } else {
+          // Nếu câu hỏi số 5 là về tone, lưu lại tone riêng
+          if (questions[4].toLowerCase().includes("tone")) {
+            tone = answer;
+          }
+          generateArticle();
+        }
+      }
+
+      async function generateArticle() {
+        questionnaire.innerHTML = `<i>Đang tạo bài viết...</i>`;
+        const res = await fetch("/generate-article", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ topic: selectedTopic, answers, tone }),
+        });
+        const data = await res.json();
+        if (data.article) {
+          questionnaire.innerHTML = "";
+          // Nếu không phải HTML, chuyển markdown sang HTML
+          let html = data.article;
+          if (!/<[a-z][\s\S]*>/i.test(html)) {
+            html = simpleMarkdownToHtml(html);
+          }
+          resultDiv.innerHTML = `<b>Bài viết hoàn chỉnh:</b><div class='article-html'>${html}</div>`;
+        } else {
+          questionnaire.innerHTML = "Lỗi khi tạo bài viết.";
+        }
+      }
+
+      // Hàm chuyển đổi markdown đơn giản sang HTML
+      function simpleMarkdownToHtml(md) {
+        let html = md;
+        // Tiêu đề --- hoặc **Tiêu đề**
+        html = html.replace(/^\*\*(.+?)\*\*$/gm, "<strong>$1</strong>");
+        html = html.replace(/^# (.+)$/gm, "<h1>$1</h1>");
+        html = html.replace(/^## (.+)$/gm, "<h2>$1</h2>");
+        html = html.replace(/^### (.+)$/gm, "<h3>$1</h3>");
+        // Dòng ---
+        html = html.replace(/^---$/gm, "<hr>");
+        // Danh sách * hoặc -
+        html = html.replace(/^[*\-] (.+)$/gm, "<li>$1</li>");
+        // Gộp các <li> liên tiếp thành <ul>
+        html = html.replace(
+          /(<li>.*?<\/li>\s*)+/gs,
+          (m) => `<ul>${m.replace(/\s*$/, "")}</ul>`
+        );
+        // Xuống dòng
+        html = html.replace(/\n{2,}/g, "</p><p>");
+        html = "<p>" + html + "</p>";
+        // Đậm **text**
+        html = html.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+        // Nghiêng *text*
+        html = html.replace(/\*(.+?)\*/g, "<em>$1</em>");
+        // Xóa <p> quanh <ul>
+        html = html.replace(/<p>(<ul>.*?<\/ul>)<\/p>/gs, "$1");
+        // Xóa <p> quanh <hr>
+        html = html.replace(/<p>(<hr>)<\/p>/g, "$1");
+        return html;
+      }
+
+      window.onload = renderTopics;
+    </script>
+  </body>
+</html>
