@@ -245,73 +245,90 @@
           if (!content) return;
           resultDiv.innerHTML =
             "<div style='padding:32px;text-align:center;color:#888;font-size:1.1em'><i>Đang phân tích với AI...</i></div>";
-          const res = await fetch("http://localhost:3000/analyze-real-estate", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content }),
-          });
-          const data = await res.json();
-          if (data && data.result) {
-            // Hiển thị kết quả phân tích với style đẹp
-            let html = "";
-            if (data.result.title) {
-              html += `<div style="font-size:1.35em;font-weight:700;color:#d2691e;display:flex;align-items:center;gap:10px;margin-bottom:8px;">
-                <span style="font-size:1.5em;">🏡</span> ${data.result.title}
-              </div>`;
+          try {
+            const res = await fetch("/analyze-real-estate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ content }),
+            });
+            // Kiểm tra HTTP status
+            if (!res.ok) {
+              resultDiv.innerHTML =
+                "<div style='padding:32px;text-align:center;color:#e57373;font-size:1.1em'>Lỗi khi kết nối API.</div>";
+              return;
             }
-            if (data.result.trend) {
-              html += `<div style="background:#fff0f6;border-left:4px solid #e57373;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
-                <b style="color:#e57373;">&#128200; Xu hướng TikTok:</b><br>${data.result.trend}
-              </div>`;
+            const data = await res.json();
+            // Xử lý trường hợp hashtag là mảng hoặc chuỗi
+            let hashtags = "";
+            if (data && data.result) {
+              if (Array.isArray(data.result.hashtag)) {
+                hashtags = data.result.hashtag.slice(0, 5).join(" ");
+              } else if (typeof data.result.hashtag === "string") {
+                hashtags = data.result.hashtag
+                  .split(/[\s#]+/)
+                  .filter(Boolean)
+                  .map((h) => (h.startsWith("#") ? h : "#" + h))
+                  .slice(0, 5)
+                  .join(" ");
+              }
+              // Hiển thị kết quả phân tích với style đẹp
+              let html = "";
+              if (data.result.title) {
+                html += `<div style="font-size:1.35em;font-weight:700;color:#d2691e;display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                  <span style="font-size:1.5em;">🏡</span> ${data.result.title}
+                </div>`;
+              }
+              if (data.result.trend) {
+                html += `<div style="background:#fff0f6;border-left:4px solid #e57373;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
+                  <b style="color:#e57373;">&#128200; Xu hướng TikTok:</b><br>${data.result.trend}
+                </div>`;
+              }
+              if (data.result.nearby) {
+                html += `<div style="background:#e3f2fd;border-left:4px solid #1976d2;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
+                  <b style="color:#1976d2;">&#128205; Tiện ích xung quanh:</b><br>${data.result.nearby}
+                </div>`;
+              }
+              html += `<div style="display:flex;gap:18px;margin-bottom:18px;">`;
+              if (data.result.area) {
+                html += `<div style="flex:1;background:#e8f5e9;border-radius:8px;padding:14px 16px;">
+                  <b style="color:#43a047;">&#128207; Diện tích đất:</b><br>
+                  <span style="font-size:1.15em;font-weight:600;color:#388e3c">${data.result.area}</span>
+                </div>`;
+              }
+              if (data.result.structure) {
+                html += `<div style="flex:1;background:#fffde7;border-radius:8px;padding:14px 16px;">
+                  <b style="color:#fbc02d;">&#128736; Kết cấu nhà:</b><br>
+                  <span style="font-size:1.05em;">${data.result.structure}</span>
+                </div>`;
+              }
+              html += `</div>`;
+              if (data.result.price) {
+                html += `<div style="background:#f3e5f5;border-left:4px solid #8e24aa;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
+                  <b style="color:#8e24aa;">&#128181; Giá bán:</b>
+                  <span style="font-size:1.25em;font-weight:700;color:#8e24aa;margin-left:8px;">${data.result.price}</span>
+                </div>`;
+              }
+              if (data.result.contact) {
+                html += `<div style="background:#e1f5fe;border-left:4px solid #0288d1;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
+                  <b style="color:#0288d1;">&#128222; Liên hệ:</b><br>${data.result.contact}
+                </div>`;
+              }
+              if (hashtags) {
+                html += `<div style="margin-bottom:18px;"><b style="color:#0077cc;"># Hashtag:</b> <span class="hashtags">${hashtags}</span></div>`;
+              }
+              if (data.result.tiktok_script) {
+                html += `<div style="background:#f9fbe7;border-left:4px solid #cddc39;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
+                  <b style="color:#afb42b;">&#127916; Gợi ý kịch bản quay TikTok:</b><br>${data.result.tiktok_script}
+                </div>`;
+              }
+              resultDiv.innerHTML = html;
+            } else {
+              resultDiv.innerHTML =
+                "<div style='padding:32px;text-align:center;color:#e57373;font-size:1.1em'>Lỗi khi phân tích tin bất động sản.</div>";
             }
-            if (data.result.nearby) {
-              html += `<div style="background:#e3f2fd;border-left:4px solid #1976d2;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
-                <b style="color:#1976d2;">&#128205; Tiện ích xung quanh:</b><br>${data.result.nearby}
-              </div>`;
-            }
-            html += `<div style="display:flex;gap:18px;margin-bottom:18px;">`;
-            if (data.result.area) {
-              html += `<div style="flex:1;background:#e8f5e9;border-radius:8px;padding:14px 16px;">
-                <b style="color:#43a047;">&#128207; Diện tích đất:</b><br>
-                <span style="font-size:1.15em;font-weight:600;color:#388e3c">${data.result.area}</span>
-              </div>`;
-            }
-            if (data.result.structure) {
-              html += `<div style="flex:1;background:#fffde7;border-radius:8px;padding:14px 16px;">
-                <b style="color:#fbc02d;">&#128736; Kết cấu nhà:</b><br>
-                <span style="font-size:1.05em;">${data.result.structure}</span>
-              </div>`;
-            }
-            html += `</div>`;
-            if (data.result.price) {
-              html += `<div style="background:#f3e5f5;border-left:4px solid #8e24aa;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
-                <b style="color:#8e24aa;">&#128181; Giá bán:</b>
-                <span style="font-size:1.25em;font-weight:700;color:#8e24aa;margin-left:8px;">${data.result.price}</span>
-              </div>`;
-            }
-            if (data.result.contact) {
-              html += `<div style="background:#e1f5fe;border-left:4px solid #0288d1;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
-                <b style="color:#0288d1;">&#128222; Liên hệ:</b><br>${data.result.contact}
-              </div>`;
-            }
-            if (data.result.hashtag) {
-              // Lấy tối đa 5 hashtag đầu tiên, tách theo dấu cách hoặc dấu #
-              let hashtags = data.result.hashtag
-                .split(/[\s#]+/)
-                .filter(Boolean)
-                .map((h) => (h.startsWith("#") ? h : "#" + h));
-              hashtags = hashtags.slice(0, 5).join(" ");
-              html += `<div style="margin-bottom:18px;"><b style="color:#0077cc;"># Hashtag:</b> <span class="hashtags">${hashtags}</span></div>`;
-            }
-            if (data.result.tiktok_script) {
-              html += `<div style="background:#f9fbe7;border-left:4px solid #cddc39;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
-                <b style="color:#afb42b;">&#127916; Gợi ý kịch bản quay TikTok:</b><br>${data.result.tiktok_script}
-              </div>`;
-            }
-            resultDiv.innerHTML = html;
-          } else {
+          } catch (e) {
             resultDiv.innerHTML =
-              "<div style='padding:32px;text-align:center;color:#e57373;font-size:1.1em'>Lỗi khi phân tích tin bất động sản.</div>";
+              "<div style='padding:32px;text-align:center;color:#e57373;font-size:1.1em'>Lỗi khi kết nối API.</div>";
           }
         };
         document.getElementById("backBtn").onclick = renderTopics;

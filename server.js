@@ -1,6 +1,7 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const path = require("path");
 
 const app = express();
 const PORT = 3000;
@@ -9,7 +10,12 @@ const API_KEY = "AIzaSyCtT6bscVkTW8tzxo9TX_a0qO3iZwpOwwA";
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 app.use(bodyParser.json({ limit: "100mb" }));
-app.use(express.static(__dirname)); // phục vụ file tĩnh
+app.use(express.static("public")); // phục vụ file tĩnh từ thư mục 'public'
+
+// Thêm route này để trả về index.html khi truy cập "/"
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
 
 app.post("/chat", async (req, res) => {
   try {
@@ -135,10 +141,14 @@ Trả về đúng định dạng JSON, không giải thích thêm.
   }
 });
 
-// Xóa hoặc comment đoạn này:
-// app.listen(PORT, () => {
-//   console.log(`Server running at http://localhost:${PORT}`);
-// });
+// Đoạn cuối file, thay vì:
+// module.exports = app;
 
-// Thay bằng:
+// Sử dụng đoạn sau để chạy local bằng node server.js:
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`Server running at http://localhost:${PORT}`);
+  });
+}
+
 module.exports = app;
