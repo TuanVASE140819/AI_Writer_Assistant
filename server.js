@@ -135,6 +135,10 @@ Trả về đúng định dạng JSON, không giải thích thêm.
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running at http://localhost:${PORT}`);
-});
+// Xóa hoặc comment đoạn này:
+// app.listen(PORT, () => {
+//   console.log(`Server running at http://localhost:${PORT}`);
+// });
+
+// Thay bằng:
+module.exports = app;
