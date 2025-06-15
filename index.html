@@ -6,6 +6,85 @@
     <style>
       body {
         font-family: Arial;
+        margin: 0;
+        padding: 0;
+        background: #f6f8fb;
+      }
+      .container-center {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 12px 0 12px;
+      }
+      h2 {
+        text-align: center;
+      }
+      .subtitle {
+        color: #6c7a89;
+        margin-bottom: 24px;
+        font-size: 1.1em;
+        text-align: center;
+      }
+      #main-flex {
+        display: flex;
+        gap: 32px;
+        align-items: flex-start;
+        justify-content: center;
+        min-height: 80vh;
+        background: #f6f8fb;
+        padding: 32px 0;
+      }
+      #questionnaire {
+        flex: 1;
+        min-width: 320px;
+        max-width: 400px;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 2px 16px #0001;
+        padding: 32px 28px;
+        margin: 0 auto;
+      }
+      #result {
+        flex: 2;
+        min-width: 340px;
+        max-width: 700px;
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 2px 16px #0001;
+        padding: 32px 28px;
+        margin: 0 auto;
+      }
+      /* Responsive cho tablet và mobile */
+      @media (max-width: 900px) {
+        #main-flex {
+          flex-direction: column;
+          align-items: stretch;
+          gap: 24px;
+          padding: 16px 0;
+        }
+        #questionnaire,
+        #result {
+          max-width: 100%;
+          min-width: 0;
+          width: 100%;
+          margin: 0 auto;
+        }
+      }
+      @media (max-width: 600px) {
+        .container-center {
+          padding: 16px 2px 0 2px;
+        }
+        #main-flex {
+          padding: 8px 0;
+        }
+        #questionnaire,
+        #result {
+          padding: 16px 6px;
+          border-radius: 8px;
+          font-size: 1em;
+        }
+      }
+      body {
+        font-family: Arial;
         margin: 40px;
       }
       #chat {
@@ -96,22 +175,31 @@
         gap: 32px;
         align-items: flex-start;
       }
-      #question-list {
-        flex: 1;
-        min-width: 220px;
-      }
       #questionnaire {
+        flex: 1;
+        min-width: 320px;
+        max-width: 420px;
+      }
+      #result {
         flex: 2;
+        min-width: 340px;
+        max-width: 700px;
       }
     </style>
   </head>
   <body>
-    <h2>AI Writer Assistant</h2>
-    <div id="main-flex">
-      <div id="question-list"></div>
-      <div id="questionnaire"></div>
+    <div class="container-center">
+      <h2 style="margin-bottom: 0">AI Writer Assistant</h2>
+      <div class="subtitle">Trợ lý viết nội dung bất động sản thông minh</div>
+      <div id="main-flex">
+        <div id="questionnaire" class="card">
+          <!-- Nội dung input sẽ render ở đây -->
+        </div>
+        <div id="result">
+          <!-- Kết quả AI sẽ render ở đây -->
+        </div>
+      </div>
     </div>
-    <div id="result" style="margin-top: 30px"></div>
     <script>
       const questionnaire = document.getElementById("questionnaire");
       const resultDiv = document.getElementById("result");
@@ -129,31 +217,111 @@
       let tone = "";
 
       function renderTopics() {
+        // Chỉ giữ lại nút phân tích tin bất động sản
         questionnaire.innerHTML = "<p>Bạn muốn viết về chủ đề nào?</p>";
-        fixedTopics.forEach((topic) => {
-          const btn = document.createElement("button");
-          btn.textContent = topic;
-          btn.className = "dynamic-option";
-          btn.onclick = () => handleTopic(topic);
-          questionnaire.appendChild(btn);
-        });
-        // Cho phép nhập chủ đề tự do
-        const input = document.createElement("input");
-        input.type = "text";
-        input.placeholder = "Hoặc nhập chủ đề khác...";
-        input.style.marginTop = "10px";
-        input.onkeydown = (e) => {
-          if (e.key === "Enter" && input.value.trim())
-            handleTopic(input.value.trim());
+        const realEstateBtn = document.createElement("button");
+        realEstateBtn.textContent = "Phân tích tin bất động sản";
+        realEstateBtn.className = "dynamic-option";
+        realEstateBtn.style.background = "#ffe082";
+        realEstateBtn.style.color = "#333";
+        realEstateBtn.onclick = renderRealEstateForm;
+        questionnaire.appendChild(realEstateBtn);
+      }
+
+      // Giao diện nhập tin bất động sản
+      function renderRealEstateForm() {
+        questionnaire.innerHTML = `
+          <div style="font-size:1.18em;font-weight:600;margin-bottom:18px;">Thông tin tin căn hộ</div>
+          <textarea id="realEstateInput" rows="10" style="width:100%;font-size:1.08em;padding:12px;border-radius:8px;border:1.5px solid #dbeafe;background:#f8fafc;margin-bottom:16px;resize:vertical;" placeholder="Nhập nội dung tin bất động sản cần phân tích..."></textarea>
+          <div style="margin-bottom:18px;">
+            <button id="analyzeBtn" class="dynamic-option" style="width:100%;background:#2a5d9f;color:#fff;font-weight:600;font-size:1.1em;margin-bottom:8px;">&#128202; Phân tích</button>
+            <button id="backBtn" class="dynamic-option" style="width:100%;background:#f5f5f5;color:#333;border-color:#bbb;">&#8592; Quay lại</button>
+          </div>
+        `;
+        document.getElementById("analyzeBtn").onclick = async () => {
+          const content = document
+            .getElementById("realEstateInput")
+            .value.trim();
+          if (!content) return;
+          resultDiv.innerHTML =
+            "<div style='padding:32px;text-align:center;color:#888;font-size:1.1em'><i>Đang phân tích với AI...</i></div>";
+          const res = await fetch("http://localhost:3000/analyze-real-estate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content }),
+          });
+          const data = await res.json();
+          if (data && data.result) {
+            // Hiển thị kết quả phân tích với style đẹp
+            let html = "";
+            if (data.result.title) {
+              html += `<div style="font-size:1.35em;font-weight:700;color:#d2691e;display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+                <span style="font-size:1.5em;">🏡</span> ${data.result.title}
+              </div>`;
+            }
+            if (data.result.trend) {
+              html += `<div style="background:#fff0f6;border-left:4px solid #e57373;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
+                <b style="color:#e57373;">&#128200; Xu hướng TikTok:</b><br>${data.result.trend}
+              </div>`;
+            }
+            if (data.result.nearby) {
+              html += `<div style="background:#e3f2fd;border-left:4px solid #1976d2;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
+                <b style="color:#1976d2;">&#128205; Tiện ích xung quanh:</b><br>${data.result.nearby}
+              </div>`;
+            }
+            html += `<div style="display:flex;gap:18px;margin-bottom:18px;">`;
+            if (data.result.area) {
+              html += `<div style="flex:1;background:#e8f5e9;border-radius:8px;padding:14px 16px;">
+                <b style="color:#43a047;">&#128207; Diện tích đất:</b><br>
+                <span style="font-size:1.15em;font-weight:600;color:#388e3c">${data.result.area}</span>
+              </div>`;
+            }
+            if (data.result.structure) {
+              html += `<div style="flex:1;background:#fffde7;border-radius:8px;padding:14px 16px;">
+                <b style="color:#fbc02d;">&#128736; Kết cấu nhà:</b><br>
+                <span style="font-size:1.05em;">${data.result.structure}</span>
+              </div>`;
+            }
+            html += `</div>`;
+            if (data.result.price) {
+              html += `<div style="background:#f3e5f5;border-left:4px solid #8e24aa;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
+                <b style="color:#8e24aa;">&#128181; Giá bán:</b>
+                <span style="font-size:1.25em;font-weight:700;color:#8e24aa;margin-left:8px;">${data.result.price}</span>
+              </div>`;
+            }
+            if (data.result.contact) {
+              html += `<div style="background:#e1f5fe;border-left:4px solid #0288d1;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
+                <b style="color:#0288d1;">&#128222; Liên hệ:</b><br>${data.result.contact}
+              </div>`;
+            }
+            if (data.result.hashtag) {
+              // Lấy tối đa 5 hashtag đầu tiên, tách theo dấu cách hoặc dấu #
+              let hashtags = data.result.hashtag
+                .split(/[\s#]+/)
+                .filter(Boolean)
+                .map((h) => (h.startsWith("#") ? h : "#" + h));
+              hashtags = hashtags.slice(0, 5).join(" ");
+              html += `<div style="margin-bottom:18px;"><b style="color:#0077cc;"># Hashtag:</b> <span class="hashtags">${hashtags}</span></div>`;
+            }
+            if (data.result.tiktok_script) {
+              html += `<div style="background:#f9fbe7;border-left:4px solid #cddc39;padding:14px 18px;border-radius:8px;margin-bottom:18px;">
+                <b style="color:#afb42b;">&#127916; Gợi ý kịch bản quay TikTok:</b><br>${data.result.tiktok_script}
+              </div>`;
+            }
+            resultDiv.innerHTML = html;
+          } else {
+            resultDiv.innerHTML =
+              "<div style='padding:32px;text-align:center;color:#e57373;font-size:1.1em'>Lỗi khi phân tích tin bất động sản.</div>";
+          }
         };
-        questionnaire.appendChild(input);
+        document.getElementById("backBtn").onclick = renderTopics;
       }
 
       async function handleTopic(topic) {
         selectedTopic = topic;
         answers = [];
         currentQuestion = 0;
-        document.getElementById('question-list').innerHTML = '';
+        document.getElementById("question-list").innerHTML = "";
         questionnaire.innerHTML = `<i>Đang lấy 5 câu hỏi gợi ý...</i>`;
         resultDiv.innerHTML = "";
         // Gọi API lấy 5 câu hỏi
@@ -210,22 +378,27 @@
 
       // Hiển thị danh sách câu hỏi và câu trả lời đã chọn
       function renderQuestionList(currentIdx) {
-        const ql = document.getElementById('question-list');
+        const ql = document.getElementById("question-list");
         if (!ql) return;
-        let html = '<div style="font-weight:bold;font-size:1.1em;margin-bottom:10px;">Câu hỏi</div>';
+        let html =
+          '<div style="font-weight:bold;font-size:1.1em;margin-bottom:10px;">Câu hỏi</div>';
         for (let i = 0; i < questions.length; i++) {
-          html += `<div style='margin-bottom:12px;${i===currentIdx?'color:#2a5d9f;font-weight:bold;':''}'>${i+1}. ${questions[i]}<br>`;
+          html += `<div style='margin-bottom:12px;${
+            i === currentIdx ? "color:#2a5d9f;font-weight:bold;" : ""
+          }'>${i + 1}. ${questions[i]}<br>`;
           if (answers[i]) {
             html += `<span style='background:#e3f2fd;border-radius:4px;padding:2px 8px;margin-top:2px;display:inline-block;'>${answers[i]}</span>`;
           }
-          html += '</div>';
+          html += "</div>";
         }
         ql.innerHTML = html;
       }
 
       function renderQuestion(idx) {
         renderQuestionList(idx);
-        questionnaire.innerHTML = `<div class='question-progress'>Câu hỏi ${idx+1}/5</div><p>${questions[idx]}</p>`;
+        questionnaire.innerHTML = `<div class='question-progress'>Câu hỏi ${
+          idx + 1
+        }/5</div><p>${questions[idx]}</p>`;
         const options = getOptionsForQuestion(idx);
         let selected = null;
         if (options.length > 0) {
@@ -235,8 +408,8 @@
             btn.className = "dynamic-option";
             btn.onclick = () => {
               selected = opt;
-              btn.classList.add('selected');
-              setTimeout(()=>handleAnswer(opt), 200);
+              btn.classList.add("selected");
+              setTimeout(() => handleAnswer(opt), 200);
             };
             questionnaire.appendChild(btn);
           });
@@ -246,7 +419,8 @@
           input.placeholder = "Hoặc nhập câu trả lời khác...";
           input.style.marginTop = "10px";
           input.onkeydown = (e) => {
-            if (e.key === "Enter" && input.value.trim()) handleAnswer(input.value.trim());
+            if (e.key === "Enter" && input.value.trim())
+              handleAnswer(input.value.trim());
           };
           questionnaire.appendChild(input);
           const btn = document.createElement("button");
@@ -263,7 +437,8 @@
           input.style.width = "80%";
           input.placeholder = "Nhập câu trả lời...";
           input.onkeydown = (e) => {
-            if (e.key === "Enter" && input.value.trim()) handleAnswer(input.value.trim());
+            if (e.key === "Enter" && input.value.trim())
+              handleAnswer(input.value.trim());
           };
           questionnaire.appendChild(input);
           const btn = document.createElement("button");
